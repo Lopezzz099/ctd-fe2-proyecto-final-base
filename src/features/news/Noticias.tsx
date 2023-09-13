@@ -31,6 +31,42 @@ export interface INoticiasNormalizadas {
   descripcionCorta?: string;
 }
 
+interface Noticia {
+  id: number;
+  titulo: string;
+  descripcion: string;
+  fecha: Date;
+  esPremium: boolean;
+  imagen: string;
+  descripcionCorta?: string;
+}
+
+// Principio SOLID: Principio de Responsabilidad Única (SRP)
+// Función de formateo de noticias
+function formatearNoticias(respuesta: Noticia[]): INoticiasNormalizadas[] {
+  return respuesta.map((n) => {
+    const titulo = n.titulo
+      .split(" ")
+      .map((str) => str.charAt(0).toUpperCase() + str.slice(1))
+      .join(" ");
+
+    const ahora = new Date();
+    const minutosTranscurridos = Math.floor(
+      (ahora.getTime() - n.fecha.getTime()) / 60000
+    );
+
+    return {
+      id: n.id,
+      titulo,
+      descripcion: n.descripcion,
+      fecha: `Hace ${minutosTranscurridos} minutos`,
+      esPremium: n.esPremium,
+      imagen: n.imagen,
+      descripcionCorta: n.descripcion.substring(0, 100),
+    };
+  });
+}
+
 const Noticias = () => {
   const [noticias, setNoticias] = useState<INoticiasNormalizadas[]>([]);
   const [modal, setModal] = useState<INoticiasNormalizadas | null>(null);
@@ -38,31 +74,8 @@ const Noticias = () => {
   useEffect(() => {
     const obtenerInformacion = async () => {
       const respuesta = await obtenerNoticias();
-
-      const data = respuesta.map((n) => {
-        const titulo = n.titulo
-          .split(" ")
-          .map((str) => {
-            return str.charAt(0).toUpperCase() + str.slice(1);
-          })
-          .join(" ");
-
-        const ahora = new Date();
-        const minutosTranscurridos = Math.floor(
-          (ahora.getTime() - n.fecha.getTime()) / 60000
-        );
-
-        return {
-          id: n.id,
-          titulo,
-          descripcion: n.descripcion,
-          fecha: `Hace ${minutosTranscurridos} minutos`,
-          esPremium: n.esPremium,
-          imagen: n.imagen,
-          descripcionCorta: n.descripcion.substring(0, 100),
-        };
-      });
-
+      // Principio SOLID: Principio Abierto/Cerrado (OCP)
+      const data = formatearNoticias(respuesta);
       setNoticias(data);
     };
 
