@@ -31,51 +31,92 @@ export interface INoticiasNormalizadas {
   descripcionCorta?: string;
 }
 
-interface Noticia {
-  id: number;
-  titulo: string;
-  descripcion: string;
-  fecha: Date;
-  esPremium: boolean;
-  imagen: string;
-  descripcionCorta?: string;
+// Principio de Responsabilidad Única (SRP) y Principio de Inversión de Dependencia (DIP)
+
+interface NoticiaProps {
+  noticia: INoticiasNormalizadas;
+  onClick: () => void;
 }
 
-// Principio SOLID: Principio de Responsabilidad Única (SRP)
-// Función de formateo de noticias
-function formatearNoticias(respuesta: Noticia[]): INoticiasNormalizadas[] {
-  return respuesta.map((n) => {
-    const titulo = n.titulo
-      .split(" ")
-      .map((str) => str.charAt(0).toUpperCase() + str.slice(1))
-      .join(" ");
+const Noticia = ({ noticia, onClick }: NoticiaProps) => {
+  return (
+    <TarjetaNoticia>
+      <ImagenTarjetaNoticia src={noticia.imagen} />
+      <TituloTarjetaNoticia>{noticia.titulo}</TituloTarjetaNoticia>
+      <FechaTarjetaNoticia>{noticia.fecha}</FechaTarjetaNoticia>
+      <DescripcionTarjetaNoticia>{noticia.descripcionCorta}</DescripcionTarjetaNoticia>
+      <BotonLectura onClick={onClick}>Ver más</BotonLectura>
+    </TarjetaNoticia>
+  );
+};
 
-    const ahora = new Date();
-    const minutosTranscurridos = Math.floor(
-      (ahora.getTime() - n.fecha.getTime()) / 60000
-    );
-
-    return {
-      id: n.id,
-      titulo,
-      descripcion: n.descripcion,
-      fecha: `Hace ${minutosTranscurridos} minutos`,
-      esPremium: n.esPremium,
-      imagen: n.imagen,
-      descripcionCorta: n.descripcion.substring(0, 100),
-    };
-  });
+interface ModalProps {
+  noticia: INoticiasNormalizadas;
+  onClose: () => void;
 }
+
+const Modal = ({ noticia, onClose }: ModalProps) => {
+  return (
+    <ContenedorModal>
+      <TarjetaModal>
+        <CloseButton onClick={onClose}>
+          <img src={Close} alt="close-button" />
+        </CloseButton>
+        {noticia.esPremium ? (
+          <>
+            <ImagenModal src={SuscribeImage} alt="mr-burns-excelent" />
+            <CotenedorTexto>
+              <TituloModal>Suscríbete a nuestro Newsletter</TituloModal>
+              <DescripcionModal>
+                Suscríbete a nuestro newsletter y recibe noticias de nuestros personajes favoritos.
+              </DescripcionModal>
+              <BotonSuscribir
+                onClick={() =>
+                  setTimeout(() => {
+                    alert("Suscripto!");
+                    onClose();
+                  }, 1000)
+                }
+              >
+                Suscríbete
+              </BotonSuscribir>
+            </CotenedorTexto>
+          </>
+        ) : (
+          <>
+            <ImagenModal src={noticia.imagen} alt="news-image" />
+            <CotenedorTexto>
+              <TituloModal>{noticia.titulo}</TituloModal>
+              <DescripcionModal>{noticia.descripcion}</DescripcionModal>
+            </CotenedorTexto>
+          </>
+        )}
+      </TarjetaModal>
+    </ContenedorModal>
+  );
+};
 
 const Noticias = () => {
   const [noticias, setNoticias] = useState<INoticiasNormalizadas[]>([]);
-  const [modal, setModal] = useState<INoticiasNormalizadas | null>(null);
+  const [modalNoticia, setModalNoticia] = useState<INoticiasNormalizadas | null>(null);
 
   useEffect(() => {
     const obtenerInformacion = async () => {
       const respuesta = await obtenerNoticias();
-      // Principio SOLID: Principio Abierto/Cerrado (OCP)
-      const data = formatearNoticias(respuesta);
+
+      const data = respuesta.map((n) => ({
+        id: n.id,
+        titulo: n.titulo
+          .split(" ")
+          .map((str) => str.charAt(0).toUpperCase() + str.slice(1))
+          .join(" "),
+        descripcion: n.descripcion,
+        fecha: `Hace ${Math.floor((new Date().getTime() - n.fecha.getTime()) / 60000)} minutos`,
+        esPremium: n.esPremium,
+        imagen: n.imagen,
+        descripcionCorta: n.descripcion.substring(0, 100),
+      }));
+
       setNoticias(data);
     };
 
@@ -87,58 +128,11 @@ const Noticias = () => {
       <TituloNoticias>Noticias de los Simpsons</TituloNoticias>
       <ListaNoticias>
         {noticias.map((n) => (
-          <TarjetaNoticia>
-            <ImagenTarjetaNoticia src={n.imagen} />
-            <TituloTarjetaNoticia>{n.titulo}</TituloTarjetaNoticia>
-            <FechaTarjetaNoticia>{n.fecha}</FechaTarjetaNoticia>
-            <DescripcionTarjetaNoticia>
-              {n.descripcionCorta}
-            </DescripcionTarjetaNoticia>
-            <BotonLectura onClick={() => setModal(n)}>Ver más</BotonLectura>
-          </TarjetaNoticia>
+          <Noticia key={n.id} noticia={n} onClick={() => setModalNoticia(n)} />
         ))}
-        {modal ? (
-          modal.esPremium ? (
-            <ContenedorModal>
-              <TarjetaModal>
-                <CloseButton onClick={() => setModal(null)}>
-                  <img src={Close} alt="close-button" />
-                </CloseButton>
-                <ImagenModal src={SuscribeImage} alt="mr-burns-excelent" />
-                <CotenedorTexto>
-                  <TituloModal>Suscríbete a nuestro Newsletter</TituloModal>
-                  <DescripcionModal>
-                    Suscríbete a nuestro newsletter y recibe noticias de
-                    nuestros personajes favoritos.
-                  </DescripcionModal>
-                  <BotonSuscribir
-                    onClick={() =>
-                      setTimeout(() => {
-                        alert("Suscripto!");
-                        setModal(null);
-                      }, 1000)
-                    }
-                  >
-                    Suscríbete
-                  </BotonSuscribir>
-                </CotenedorTexto>
-              </TarjetaModal>
-            </ContenedorModal>
-          ) : (
-            <ContenedorModal>
-              <TarjetaModal>
-                <CloseButton onClick={() => setModal(null)}>
-                  <img src={Close} alt="close-button" />
-                </CloseButton>
-                <ImagenModal src={modal.imagen} alt="news-image" />
-                <CotenedorTexto>
-                  <TituloModal>{modal.titulo}</TituloModal>
-                  <DescripcionModal>{modal.descripcion}</DescripcionModal>
-                </CotenedorTexto>
-              </TarjetaModal>
-            </ContenedorModal>
-          )
-        ) : null}
+        {modalNoticia && (
+          <Modal noticia={modalNoticia} onClose={() => setModalNoticia(null)} />
+        )}
       </ListaNoticias>
     </ContenedorNoticias>
   );
